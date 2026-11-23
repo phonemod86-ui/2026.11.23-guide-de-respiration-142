@@ -52,12 +52,40 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: width 0.3s ease, height 0.3s ease;
     }
 
     @media (min-width: 640px) {
       .breath-stage {
         width: 270px;
         height: 270px;
+      }
+    }
+
+    /* 沉浸全屏模式样式 */
+    body.immersive-fullscreen header,
+    body.immersive-fullscreen footer,
+    body.immersive-fullscreen .secondary-controls {
+      display: none !important;
+    }
+
+    body.immersive-fullscreen main {
+      max-width: 100% !important;
+      min-height: 100vh;
+      border-radius: 0 !important;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 25%, #1e293b 0%, #060a14 80%);
+    }
+
+    body.immersive-fullscreen .breath-stage {
+      width: 290px;
+      height: 290px;
+    }
+
+    @media (min-width: 640px) {
+      body.immersive-fullscreen .breath-stage {
+        width: 340px;
+        height: 340px;
       }
     }
 
@@ -95,6 +123,11 @@
         width: 215px;
         height: 215px;
       }
+    }
+
+    body.immersive-fullscreen .breath-orb {
+      width: 235px;
+      height: 235px;
     }
 
     /* 憋气阶段轻微呼吸脉动动画 */
@@ -213,16 +246,24 @@
   <!-- 主训练卡片区域 -->
   <main class="w-full max-w-2xl glass-card rounded-3xl p-5 sm:p-8 flex flex-col items-center gap-6">
 
-    <!-- 顶部状态栏：当前轮数统计 & 1:4:2 时长概览 -->
+    <!-- 顶部状态栏：当前轮数统计、全屏按钮 & 1:4:2 时长概览 -->
     <div class="w-full flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-700/50 rounded-2xl px-4 py-3">
-      <div class="flex items-center gap-2">
-        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span id="cycle-label" class="text-xs sm:text-sm text-slate-300 font-medium">已完成轮数</span>
-        <span id="cycle-count" class="text-lg sm:text-xl font-extrabold text-emerald-400 ml-1">0</span>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="cycle-label" class="text-xs sm:text-sm text-slate-300 font-medium">已完成轮数</span>
+          <span id="cycle-count" class="text-lg sm:text-xl font-extrabold text-emerald-400 ml-0.5">0</span>
+        </div>
+
+        <!-- 类似 YouTube 网页全屏/沉浸模式按钮 -->
+        <button id="btn-fullscreen" type="button" class="btn-press px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-600/70 flex items-center gap-1.5">
+          <span>⛶</span>
+          <span id="btn-fullscreen-text">全屏模式</span>
+        </button>
       </div>
 
       <!-- 三阶段实时秒数预览徽章 -->
-      <div class="flex items-center gap-2 text-xs sm:text-sm font-semibold">
+      <div class="secondary-controls flex items-center gap-2 text-xs sm:text-sm font-semibold">
         <span id="badge-inhale" class="px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-400/30">
           吸气 2s
         </span>
@@ -266,6 +307,11 @@
         <div class="w-64 sm:w-80 h-4 bg-slate-900/90 rounded-full overflow-hidden border border-slate-700/80 p-0.5 mt-3 shadow-inner">
           <div id="phase-progress-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-none"></div>
         </div>
+
+        <!-- 屏幕防息屏状态提示 -->
+        <p id="wakelock-status" class="text-[11px] text-slate-400 mt-2">
+          屏幕防息屏：训练开始时自动请求保持亮屏
+        </p>
       </div>
     </div>
 
@@ -288,7 +334,7 @@
     </div>
 
     <!-- 鼠标/触摸调节单位时间滑块区（1.0s - 6.0s，步进 0.5s） -->
-    <div class="w-full bg-slate-900/55 border border-slate-700/60 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+    <div class="secondary-controls w-full bg-slate-900/55 border border-slate-700/60 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <label for="unit-slider" id="unit-label" class="text-sm sm:text-base font-bold text-slate-200">
           单位时间调节 (1 单位)
@@ -323,7 +369,7 @@
     </div>
 
     <!-- 语音与音量控制面板 -->
-    <div class="w-full bg-slate-900/55 border border-slate-700/60 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="secondary-controls w-full bg-slate-900/55 border border-slate-700/60 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
       <!-- 开关：阶段语音提示 & 读秒语音播报 -->
       <div class="flex flex-wrap items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -367,24 +413,17 @@
   </div>
 
   <script>
-    /**
-     * ============================================================================
-     * 1:4:2 三语呼吸引导应用核心逻辑 (简体中文 / English / Français)
-     * 特性：
-     * 1. 严格遵循 1:4:2 呼吸比例（吸气 1 单位，憋气 4 单位，呼气 2 单位）。
-     * 2. 每阶段先完整播报阶段名称（如“吸气”），播报完成后（onend）才开始读秒与进度动画。
-     * 3. 读秒从 2 开始播报至该阶段总秒数（例如 8 秒阶段：依次播报 2, 3, 4, 5, 6, 7, 8）。
-     * 4. 针对 iOS Safari 做了语音解锁、onend 超时兜底以及防止语音对象被垃圾回收的处理。
-     * ============================================================================
-     */
-
-    // 1. 多语言字典配置
     const I18N = {
       zh: {
         langCode: 'zh-CN',
         appTitle: '1:4:2 呼吸引导',
         appSubtitle: '源自《人生的四大秘密》 · 呼吸的秘密',
         cycleLabel: '已完成轮数',
+        btnFullscreen: '全屏模式',
+        btnExitFullscreen: '退出全屏',
+        wakeLockInit: '屏幕防息屏：训练开始时自动请求保持亮屏',
+        wakeLockActive: '屏幕防息屏：已请求保持屏幕常亮（以系统实际限制为准）',
+        wakeLockUnsupported: '屏幕防息屏：当前浏览器不支持自动常亮，若息屏请在系统设置中调长自动锁定',
         readyTitle: '准备开始',
         readyHint: '点击下方开始',
         speakingCueHint: '语音引导中...',
@@ -415,6 +454,11 @@
         appTitle: '1:4:2 Breathing Guide',
         appSubtitle: 'Inspired by "The Four Secrets of Life"',
         cycleLabel: 'Completed Cycles',
+        btnFullscreen: 'Fullscreen',
+        btnExitFullscreen: 'Exit Fullscreen',
+        wakeLockInit: 'Keep Screen Awake: Requested automatically when training starts',
+        wakeLockActive: 'Keep Screen Awake: Active (subject to system/browser limits)',
+        wakeLockUnsupported: 'Keep Screen Awake: Unsupported here; adjust Auto-Lock in device settings if needed',
         readyTitle: 'Ready',
         readyHint: 'Press Start below',
         speakingCueHint: 'Voice cue...',
@@ -445,6 +489,11 @@
         appTitle: 'Guide Respiratoire 1:4:2',
         appSubtitle: 'Inspiré des « Quatre Secrets de la Vie »',
         cycleLabel: 'Cycles Terminés',
+        btnFullscreen: 'Plein écran',
+        btnExitFullscreen: 'Quitter plein écran',
+        wakeLockInit: 'Écran actif : demandé automatiquement au démarrage',
+        wakeLockActive: 'Écran actif : demandé (selon limites du système/navigateur)',
+        wakeLockUnsupported: 'Écran actif : non pris en charge ici ; ajustez le verrouillage auto si besoin',
         readyTitle: 'Prêt',
         readyHint: 'Appuyez sur Démarrer',
         speakingCueHint: 'Annonce vocale...',
@@ -472,35 +521,39 @@
       }
     };
 
-    // 2. 应用全局状态
     const state = {
-      lang: 'zh',               // 当前语言：'zh' | 'en' | 'fr'
-      unitTime: 2.0,            // 基础单位时间（1.0 ~ 6.0 秒）
-      isRunning: false,         // 是否正在运行
-      isPaused: false,          // 是否处于暂停状态
-      phaseIndex: 0,            // 0: inhale(吸气), 1: hold(憋气), 2: exhale(呼气)
-      cycles: 0,                // 已完成完整呼吸轮数
-      isSpeakingCue: false,     // 当前是否正在播报阶段名称（未开始读秒前）
-      phaseDuration: 2,         // 当前阶段的总秒数（支持 0.5 精度计算与整数读秒）
-      phaseStartTime: 0,        // 当前阶段读秒开始的时间戳
-      pausedElapsed: 0,         // 暂停时已流逝的毫秒数
-      lastSpokenSecond: 1,      // 记录上次播报的数字（从 2 开始）
-      rafId: null,              // requestAnimationFrame 句柄
-      cueFallbackTimer: null,   // 防止 iOS Safari 语音 onend 不触发的保险定时器
-      activeUtterances: [],     // 防止 Chrome/Safari 提前回收 SpeechSynthesisUtterance 对象
-      voices: []                // 缓存系统可用语音列表
+      lang: 'zh',
+      unitTime: 2.0,
+      isRunning: false,
+      isPaused: false,
+      isImmersive: false,
+      wakeLockSentinel: null,
+      wakeLockState: 'init', // 'init' | 'active' | 'unsupported'
+      phaseIndex: 0,
+      cycles: 0,
+      isSpeakingCue: false,
+      phaseDuration: 2,
+      phaseStartTime: 0,
+      pausedElapsed: 0,
+      lastSpokenSecond: 1,
+      rafId: null,
+      cueFallbackTimer: null,
+      activeUtterances: [],
+      voices: []
     };
 
     const PHASE_ORDER = ['inhale', 'hold', 'exhale'];
     const PHASE_MULTIPLIERS = { inhale: 1, hold: 4, exhale: 2 };
 
-    // 3. DOM 元素缓存
     const els = {
       langBtns: document.querySelectorAll('.lang-btn'),
       appTitle: document.getElementById('app-title'),
       appSubtitle: document.getElementById('app-subtitle'),
       cycleLabel: document.getElementById('cycle-label'),
       cycleCount: document.getElementById('cycle-count'),
+      btnFullscreen: document.getElementById('btn-fullscreen'),
+      btnFullscreenText: document.getElementById('btn-fullscreen-text'),
+      wakeLockStatus: document.getElementById('wakelock-status'),
       badgeInhale: document.getElementById('badge-inhale'),
       badgeHold: document.getElementById('badge-hold'),
       badgeExhale: document.getElementById('badge-exhale'),
@@ -533,7 +586,6 @@
       toastBox: document.getElementById('toast-box')
     };
 
-    // 4. 轻量级 Toast 提示（严禁使用 alert）
     let toastTimer = null;
     function showToast(msg) {
       els.toastBox.textContent = msg;
@@ -546,7 +598,81 @@
       }, 3200);
     }
 
-    // 5. 初始化语音引擎并加载系统语音列表
+    // 屏幕防息屏（Screen Wake Lock API）
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator) || typeof navigator.wakeLock.request !== 'function') {
+        state.wakeLockState = 'unsupported';
+        updateUI();
+        return;
+      }
+      try {
+        if (state.wakeLockSentinel) {
+          await state.wakeLockSentinel.release();
+          state.wakeLockSentinel = null;
+        }
+        state.wakeLockSentinel = await navigator.wakeLock.request('screen');
+        state.wakeLockState = 'active';
+        state.wakeLockSentinel.addEventListener('release', () => {
+          state.wakeLockSentinel = null;
+          if (!state.isRunning || state.isPaused) {
+            state.wakeLockState = 'init';
+          }
+          updateUI();
+        });
+      } catch (err) {
+        state.wakeLockState = 'unsupported';
+      }
+      updateUI();
+    }
+
+    async function releaseWakeLock() {
+      try {
+        if (state.wakeLockSentinel) {
+          await state.wakeLockSentinel.release();
+          state.wakeLockSentinel = null;
+        }
+      } catch (err) {
+        // 忽略释放异常
+      }
+      state.wakeLockState = 'init';
+      updateUI();
+    }
+
+    // 网页沉浸全屏（类似 YouTube 网页端全屏，同时尝试原生 Fullscreen API）
+    async function toggleFullscreenMode() {
+      state.isImmersive = !state.isImmersive;
+      document.body.classList.toggle('immersive-fullscreen', state.isImmersive);
+
+      try {
+        if (state.isImmersive && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        } else if (!state.isImmersive && document.exitFullscreen && document.fullscreenElement) {
+          await document.exitFullscreen();
+        }
+      } catch (err) {
+        // iOS Safari 常见不支持 documentElement.requestFullscreen，保留沉浸布局视图即可
+      }
+      updateUI();
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && state.isImmersive) {
+        // 桌面端按 Esc 退出全屏时同步状态
+        if (window.innerWidth >= 640) {
+          state.isImmersive = false;
+          document.body.classList.remove('immersive-fullscreen');
+          updateUI();
+        }
+      }
+    });
+
+    // 重新回到前台时若仍在训练，尝试重新申请 Wake Lock
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.isRunning && !state.isPaused) {
+        requestWakeLock();
+      }
+    });
+
     function loadVoices() {
       if (!('speechSynthesis' in window)) return;
       state.voices = window.speechSynthesis.getVoices() || [];
@@ -557,26 +683,16 @@
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    /**
-     * 根据当前选择的语言选择最佳语音引擎
-     */
     function getBestVoice(langCode) {
       if (!state.voices.length) loadVoices();
       const prefix = langCode.split('-')[0].toLowerCase();
-      // 优先精确匹配 (如 zh-CN, en-US, fr-FR)
       let match = state.voices.find(v => v.lang.toLowerCase() === langCode.toLowerCase());
-      // 其次匹配语言前缀 (如 zh, en, fr)
       if (!match) {
         match = state.voices.find(v => v.lang.toLowerCase().startsWith(prefix));
       }
       return match || null;
     }
 
-    /**
-     * 封装 Web Speech API 播报函数
-     * @param {string} text - 要朗读的文本
-     * @param {object} options - { rate, onComplete }
-     */
     function speakText(text, { rate = 1.05, onComplete = null } = {}) {
       if (!('speechSynthesis' in window)) {
         if (onComplete) onComplete();
@@ -590,7 +706,6 @@
       }
 
       try {
-        // 清理上一段未完成的语音，避免堆积延迟
         window.speechSynthesis.cancel();
 
         const dict = I18N[state.lang];
@@ -605,7 +720,6 @@
           utterance.voice = bestVoice;
         }
 
-        // 保存引用防止垃圾回收导致 onend 丢失
         state.activeUtterances.push(utterance);
 
         let finished = false;
@@ -620,7 +734,6 @@
         utterance.onend = done;
         utterance.onerror = done;
 
-        // 兜底保护：如果某些手机浏览器未正常触发 onend，按字数估算最长等待时间后继续执行
         if (onComplete) {
           const estimatedMs = Math.max(950, text.length * 320 + 450);
           state.cueFallbackTimer = setTimeout(done, estimatedMs);
@@ -632,17 +745,14 @@
       }
     }
 
-    // 6. 格式化数字显示（整数不带小数点，半秒显示 .5）
     function formatSec(val) {
       return Number.isInteger(val) ? `${val}` : `${val.toFixed(1)}`;
     }
 
-    // 7. 刷新界面语言文本与各阶段时间预览
     function updateUI() {
       const dict = I18N[state.lang];
       document.documentElement.lang = dict.langCode;
 
-      // 更新语言按钮高亮样式
       els.langBtns.forEach(btn => {
         const active = btn.dataset.lang === state.lang;
         if (active) {
@@ -652,10 +762,19 @@
         }
       });
 
-      // 更新静态标签
       els.appTitle.textContent = dict.appTitle;
       els.appSubtitle.textContent = dict.appSubtitle;
       els.cycleLabel.textContent = dict.cycleLabel;
+      els.btnFullscreenText.textContent = state.isImmersive ? dict.btnExitFullscreen : dict.btnFullscreen;
+
+      if (state.wakeLockState === 'active') {
+        els.wakeLockStatus.textContent = dict.wakeLockActive;
+      } else if (state.wakeLockState === 'unsupported') {
+        els.wakeLockStatus.textContent = dict.wakeLockUnsupported;
+      } else {
+        els.wakeLockStatus.textContent = dict.wakeLockInit;
+      }
+
       els.timerUnit.textContent = dict.timerUnit;
       els.btnPauseText.textContent = dict.btnPause;
       els.btnResetText.textContent = dict.btnReset;
@@ -666,10 +785,8 @@
       els.footerRule.textContent = dict.footerRule;
       els.footerSafety.textContent = dict.footerSafety;
 
-      // 更新开始/继续按钮文字
       els.btnStartText.textContent = state.isPaused ? dict.btnResume : dict.btnStart;
 
-      // 计算 1:4:2 三个阶段的具体秒数
       const dInhale = state.unitTime * PHASE_MULTIPLIERS.inhale;
       const dHold = state.unitTime * PHASE_MULTIPLIERS.hold;
       const dExhale = state.unitTime * PHASE_MULTIPLIERS.exhale;
@@ -679,7 +796,6 @@
       els.badgeHold.textContent = `${dict.phases.hold.label} ${formatSec(dHold)}s`;
       els.badgeExhale.textContent = `${dict.phases.exhale.label} ${formatSec(dExhale)}s`;
 
-      // 如果当前未运行且未暂停，刷新待机提示
       if (!state.isRunning && !state.isPaused) {
         els.phaseTitle.textContent = dict.readyTitle;
         els.voiceCueBadge.textContent = dict.readyHint;
@@ -693,7 +809,6 @@
       }
     }
 
-    // 8. 应用不同呼吸阶段的视觉配色与圆球样式
     function applyPhaseTheme(phaseKey) {
       els.breathOrb.classList.remove('orb-holding');
 
@@ -718,7 +833,6 @@
       }
     }
 
-    // 9. 启动指定呼吸阶段（核心逻辑：先播报指令，完成后再开始读秒与动画）
     function startPhase(index) {
       if (!state.isRunning || state.isPaused) return;
 
@@ -726,20 +840,17 @@
       const phaseKey = PHASE_ORDER[index];
       const dict = I18N[state.lang];
 
-      // 计算当前阶段时长（秒）
       state.phaseDuration = state.unitTime * PHASE_MULTIPLIERS[phaseKey];
       state.pausedElapsed = 0;
-      state.lastSpokenSecond = 1; // 准备从 2 开始读秒
+      state.lastSpokenSecond = 1;
       state.isSpeakingCue = true;
 
-      // 更新界面视觉主题与文字
       applyPhaseTheme(phaseKey);
       els.phaseTitle.textContent = dict.phases[phaseKey].label;
       els.voiceCueBadge.textContent = dict.speakingCueHint;
       els.timerNumber.textContent = '1';
       els.progressBar.style.width = '0%';
 
-      // 设置阶段初始圆球大小（吸气从小开始，憋气与呼气从最大开始）
       if (phaseKey === 'inhale') {
         els.breathOrb.style.transform = 'scale(0.62)';
         els.breathHalo.style.transform = 'scale(0.65)';
@@ -748,30 +859,26 @@
         els.breathHalo.style.transform = 'scale(1.12)';
       }
 
-      // 定义语音播报完成后的回调：正式开启本阶段的计时与读秒
       const beginCountingPhase = () => {
         if (!state.isRunning || state.isPaused) return;
         state.isSpeakingCue = false;
         els.voiceCueBadge.textContent = dict.countingHint;
         state.phaseStartTime = performance.now();
-        state.lastSpokenSecond = 1; // 确保第 2 秒到达时触发播报 "2"
+        state.lastSpokenSecond = 1;
         cancelAnimationFrame(state.rafId);
         state.rafId = requestAnimationFrame(tickPhaseLoop);
       };
 
-      // 判断是否开启“阶段语音提示”
       if (els.toggleCueVoice.checked) {
         speakText(dict.phases[phaseKey].speak, {
           rate: 1.0,
           onComplete: beginCountingPhase
         });
       } else {
-        // 若关闭了阶段提示音，短暂延迟 250ms 后直接进入读秒
         state.cueFallbackTimer = setTimeout(beginCountingPhase, 250);
       }
     }
 
-    // 10. 阶段主循环：驱动进度条、圆球缩放动画以及从 2 开始的整数读秒
     function tickPhaseLoop(now) {
       if (!state.isRunning || state.isPaused || state.isSpeakingCue) return;
 
@@ -779,12 +886,9 @@
       const totalMs = state.phaseDuration * 1000;
       const progress = Math.min(elapsedMs / totalMs, 1);
 
-      // 更新粗进度条宽度
       els.progressBar.style.width = `${(progress * 100).toFixed(2)}%`;
 
-      // 更新呼吸圆球缩放动画
       const phaseKey = PHASE_ORDER[state.phaseIndex];
-      // 使用正弦缓动让呼吸扩张和收缩更自然柔和
       const easeProgress = 0.5 - 0.5 * Math.cos(Math.PI * progress);
 
       if (phaseKey === 'inhale') {
@@ -802,25 +906,20 @@
         els.breathHalo.style.transform = `scale(${haloScale.toFixed(4)})`;
       }
 
-      // 计算当前处于第几秒（第 1 秒内显示 1，满 1 秒进入第 2 秒时显示并朗读 "2"，以此类推直到总秒数）
       const totalIntSeconds = Math.round(state.phaseDuration);
       const currentSecond = Math.min(Math.floor(elapsedMs / 1000) + 1, totalIntSeconds);
 
       els.timerNumber.textContent = `${currentSecond}`;
 
-      // 当到达第 2 秒及之后的整数秒时，语音播报数字（从 2 读到最后）
       if (currentSecond >= 2 && currentSecond > state.lastSpokenSecond) {
         state.lastSpokenSecond = currentSecond;
         if (els.toggleCountVoice.checked) {
-          // 语速略微加快（1.25），确保快速读秒时数字之间清晰不重叠
           speakText(String(currentSecond), { rate: 1.25 });
         }
       }
 
-      // 判断当前阶段是否结束
       if (progress >= 1) {
         const nextIndex = (state.phaseIndex + 1) % 3;
-        // 如果刚完成“呼气”（index === 2），说明完成了一个完整 1:4:2 循环
         if (state.phaseIndex === 2) {
           state.cycles += 1;
           els.cycleCount.textContent = `${state.cycles}`;
@@ -831,13 +930,13 @@
       }
     }
 
-    // 11. 控制逻辑：开始 / 继续 / 暂停 / 重置
     function handleStartOrResume() {
       if (!('speechSynthesis' in window)) {
         showToast(I18N[state.lang].toastNoSpeech);
       }
 
-      // 如果是从暂停状态恢复
+      requestWakeLock();
+
       if (state.isPaused) {
         state.isPaused = false;
         state.isRunning = true;
@@ -847,17 +946,14 @@
         updateUI();
 
         if (state.isSpeakingCue) {
-          // 如果暂停时刚好在播报阶段名称，重新从当前阶段开始
           startPhase(state.phaseIndex);
         } else {
-          // 从暂停的时间点继续计时
           state.phaseStartTime = performance.now() - state.pausedElapsed;
           state.rafId = requestAnimationFrame(tickPhaseLoop);
         }
         return;
       }
 
-      // 全新开始训练
       if (state.isRunning) return;
       state.isRunning = true;
       state.isPaused = false;
@@ -867,7 +963,6 @@
       els.btnPause.disabled = false;
       updateUI();
 
-      // 从第 0 阶段（吸气）开始
       startPhase(0);
     }
 
@@ -884,6 +979,8 @@
       if (!state.isSpeakingCue) {
         state.pausedElapsed = performance.now() - state.phaseStartTime;
       }
+
+      releaseWakeLock();
 
       els.btnStart.disabled = false;
       els.btnStart.classList.remove('opacity-50', 'pointer-events-none');
@@ -905,7 +1002,8 @@
         window.speechSynthesis.cancel();
       }
 
-      // 重置 UI 元素状态
+      releaseWakeLock();
+
       els.cycleCount.textContent = '0';
       els.timerNumber.textContent = '0';
       els.progressBar.style.width = '0%';
@@ -921,7 +1019,6 @@
       updateUI();
     }
 
-    // 12. 调节单位时间（滑块与微调按钮）
     function setUnitTime(val) {
       const clamped = Math.min(6.0, Math.max(1.0, Math.round(val * 2) / 2));
       state.unitTime = clamped;
@@ -929,8 +1026,6 @@
       updateUI();
     }
 
-    // 13. 事件监听器绑定
-    // 语言切换按钮
     els.langBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const selectedLang = btn.dataset.lang;
@@ -941,12 +1036,12 @@
       });
     });
 
-    // 单位时间滑块拖动（实时更新）
+    els.btnFullscreen.addEventListener('click', toggleFullscreenMode);
+
     els.unitSlider.addEventListener('input', (e) => {
       setUnitTime(parseFloat(e.target.value));
     });
 
-    // 单位时间减号 / 加号按钮
     els.btnUnitDec.addEventListener('click', () => {
       setUnitTime(state.unitTime - 0.5);
     });
@@ -954,12 +1049,10 @@
       setUnitTime(state.unitTime + 0.5);
     });
 
-    // 开始 / 暂停 / 重置按钮
     els.btnStart.addEventListener('click', handleStartOrResume);
     els.btnPause.addEventListener('click', handlePause);
     els.btnReset.addEventListener('click', handleReset);
 
-    // 测试语音按钮（用于测试三语发音及解锁 iOS Safari 音频上下文）
     els.btnTestVoice.addEventListener('click', () => {
       if (!('speechSynthesis' in window)) {
         showToast(I18N[state.lang].toastNoSpeech);
@@ -968,7 +1061,6 @@
       speakText(I18N[state.lang].testVoicePhrase, { rate: 1.05 });
     });
 
-    // 页面初始化渲染
     window.addEventListener('DOMContentLoaded', () => {
       applyPhaseTheme('inhale');
       updateUI();
