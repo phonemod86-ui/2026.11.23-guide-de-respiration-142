@@ -404,7 +404,7 @@
       规则：先语音播报阶段指令，播报完成后开始读秒（从 2 读到该阶段结束），随后自动进入下一阶段。
     </p>
     <p id="footer-safety" class="text-slate-500">
-      温馨提示：憋气请以身体舒适为前提，切勿勉强屏息。在 iPhone / iPad 上请确保关闭侧面静音键并调大媒体音量。
+      温馨提示：憋气请以身体舒适为前提，切勿勉强屏息。在 iPhone / iPad 上请确保关闭侧面静音键并调大媒体音量。<a href="https://phonemod86-ui.github.io/2026.11.23-guide-de-respiration-142/2026.11.24%20142advenced%20version.html" class="underline text-sky-400 hover:text-sky-300 ml-1">点击进入进阶版</a>
     </p>
   </footer>
 
@@ -413,6 +413,8 @@
   </div>
 
   <script>
+    const ADVANCED_URL = 'https://phonemod86-ui.github.io/2026.11.23-guide-de-respiration-142/2026.11.24%20142advenced%20version.html';
+
     const I18N = {
       zh: {
         langCode: 'zh-CN',
@@ -446,7 +448,7 @@
         testVoiceBtn: '测试语音',
         testVoicePhrase: '吸气，憋气，呼气，语音正常',
         footerRule: '规则：先语音播报阶段指令，播报完成后开始读秒（从 2 读到该阶段结束），随后自动进入下一阶段。',
-        footerSafety: '温馨提示：憋气请以身体舒适为前提，切勿勉强屏息。iPhone / iPad 请确保关闭静音键。',
+        footerSafety: `温馨提示：憋气请以身体舒适为前提，切勿勉强屏息。在 iPhone / iPad 上请确保关闭侧面静音键并调大媒体音量。<a href="${ADVANCED_URL}" class="underline text-sky-400 hover:text-sky-300 ml-1">点击进入进阶版</a>`,
         toastNoSpeech: '当前浏览器不支持系统语音播报，将使用纯视觉引导。'
       },
       en: {
@@ -481,7 +483,7 @@
         testVoiceBtn: 'Test Voice',
         testVoicePhrase: 'Inhale, Hold, Exhale. Voice is ready.',
         footerRule: 'Flow: Speaks the phase cue first, then starts counting from 2 up to the phase duration.',
-        footerSafety: 'Note: Never force breath holding; stay comfortable. On iPhone/iPad, turn off silent mode.',
+        footerSafety: `Note: Never force breath holding; stay comfortable. On iPhone/iPad, turn off silent mode.<a href="${ADVANCED_URL}" class="underline text-sky-400 hover:text-sky-300 ml-1">点击进入进阶版</a>`,
         toastNoSpeech: 'Web Speech API is not supported in this browser. Running in visual mode.'
       },
       fr: {
@@ -516,7 +518,7 @@
         testVoiceBtn: 'Tester la voix',
         testVoicePhrase: 'Inspirer, Retenir, Expirer. La voix fonctionne.',
         footerRule: 'Règle : Annonce vocale de la phase d’abord, puis décompte à partir de 2 jusqu’à la fin.',
-        footerSafety: 'Conseil : Restez toujours à l’aise pendant la rétention. Sur iPhone/iPad, désactivez le mode silencieux.',
+        footerSafety: `Conseil : Restez toujours à l’aise pendant la rétention. Sur iPhone/iPad, désactivez le mode silencieux.<a href="${ADVANCED_URL}" class="underline text-sky-400 hover:text-sky-300 ml-1">点击进入进阶版</a>`,
         toastNoSpeech: 'Synthèse vocale non prise en charge par ce navigateur. Mode visuel actif.'
       }
     };
@@ -783,7 +785,8 @@
       els.labelCountVoice.textContent = dict.countVoiceLabel;
       els.btnTestVoice.textContent = dict.testVoiceBtn;
       els.footerRule.textContent = dict.footerRule;
-      els.footerSafety.textContent = dict.footerSafety;
+      // 使用 innerHTML 保留底部“点击进入进阶版”超链接
+      els.footerSafety.innerHTML = dict.footerSafety;
 
       els.btnStartText.textContent = state.isPaused ? dict.btnResume : dict.btnStart;
 
